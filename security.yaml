@@ -1,0 +1,10 @@
+security:
+  firewalls:
+    main:
+      # Authentication methods like form_login, api_login, etc.
+      form_login: ~
+      logout: true
+
+  access_control:
+    - { path: ^/admin, roles: ROLE_ADMIN }
+    - { path: ^/profile, roles: ROLE_USER }
