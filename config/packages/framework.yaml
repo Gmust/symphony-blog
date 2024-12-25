@@ -1,15 +1,13 @@
-# see https://symfony.com/doc/current/reference/configuration/framework.html
 framework:
     secret: '%env(APP_SECRET)%'
-
-    # Note that the session will be started ONLY if you read or write from it.
-    session: true
-
-    #esi: true
-    #fragments: true
+    session:
+        handler_id: null # Filesystem-based session storage
+        cookie_secure: auto # Secure cookies in HTTPS
+        cookie_samesite: lax # SameSite cookie policy
+        save_path: '%kernel.project_dir%/var/sessions/%kernel.environment%'
 
 when@test:
     framework:
         test: true
         session:
-            storage_factory_id: session.storage.factory.mock_file
+            storage_factory_id: session.storage.factory.mock_file # Use mock file storage for tests
