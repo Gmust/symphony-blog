@@ -1,4 +1,4 @@
-#syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1
 
 # Base FrankenPHP image
 FROM dunglas/frankenphp:1-php8.3 AS frankenphp_upstream
@@ -26,16 +26,23 @@ RUN set -eux; \
         opcache \
         zip \
         pdo_pgsql \
-        pdo_mysql;
+        pdo_mysql \
+        http
 
 # Environment settings
 ENV COMPOSER_ALLOW_SUPERUSER=1
 ENV PHP_INI_SCAN_DIR=":$PHP_INI_DIR/app.conf.d"
 
+# **Create session save path directory**
+RUN mkdir -p /tmp/sessions && chmod -R 733 /tmp/sessions && chown -R www-data:www-data /tmp/sessions
+
 # Copy necessary configurations
 COPY --link frankenphp/conf.d/10-app.ini $PHP_INI_DIR/app.conf.d/
 COPY --link --chmod=755 frankenphp/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 COPY --link frankenphp/Caddyfile /etc/caddy/Caddyfile
+
+# **Copy custom PHP configuration**
+COPY --link frankenphp/conf.d/custom.ini $PHP_INI_DIR/app.conf.d/
 
 ENTRYPOINT ["docker-entrypoint"]
 HEALTHCHECK --start-period=60s CMD curl -f http://localhost:2019/metrics || exit 1

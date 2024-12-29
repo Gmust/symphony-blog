@@ -1,13 +1,6 @@
 framework:
     secret: '%env(APP_SECRET)%'
     session:
-        handler_id: null # Filesystem-based session storage
-        cookie_secure: auto # Secure cookies in HTTPS
-        cookie_samesite: lax # SameSite cookie policy
-        save_path: '%kernel.project_dir%/var/sessions/%kernel.environment%'
-
-when@test:
-    framework:
-        test: true
-        session:
-            storage_factory_id: session.storage.factory.mock_file # Use mock file storage for tests
+        handler_id: null
+        cookie_secure: auto
+        cookie_samesite: lax

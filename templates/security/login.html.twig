@@ -1,0 +1,11 @@
+<form action="{{ path('app_login') }}" method="post">
+    <label for="email">Email:</label>
+    <input type="email" id="email" name="email" value="{{ last_username }}" required autofocus>
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password" required>
+    <label>
+        <input type="checkbox" name="_remember_me"> Remember me
+    </label>
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+    <button type="submit">Login</button>
+</form>
