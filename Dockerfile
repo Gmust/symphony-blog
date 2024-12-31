@@ -45,7 +45,7 @@ COPY --link frankenphp/Caddyfile /etc/caddy/Caddyfile
 COPY --link frankenphp/conf.d/custom.ini $PHP_INI_DIR/app.conf.d/
 
 # Install Node.js and Tailwind CSS
-RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs
 
 # Copy package.json and install npm dependencies
@@ -100,5 +100,5 @@ RUN set -eux; \
     mkdir -p var/cache var/log; \
     composer dump-autoload --classmap-authoritative --no-dev; \
     composer dump-env prod; \
-    composer run-script --no-dev post-install-cmd; \
+    composer run-script --no-dev posts-install-cmd; \
     chmod +x bin/console; sync;

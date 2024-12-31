@@ -1,3 +1,4 @@
+# User Authentication Routes
 app_login:
     path: /login
     controller: App\Controller\SecurityController::login
@@ -10,6 +11,38 @@ app_register:
     path: /register
     controller: App\Controller\RegistrationController::register
 
+# Home Routes
 app_home:
     path: /home
     controller: App\Controller\HomeController::index
+
+app_main:
+    path: /
+    controller: App\Controller\MainController::index
+
+# Post Routes
+get_all_posts:
+    path: /posts
+    controller: App\Controller\PostController::getAllPosts
+
+get_post:
+    path: /posts/{id}
+    controller: App\Controller\PostController::getPost
+    requirements:
+        id: \d+
+
+create_post:
+    path: /post/new
+    controller: App\Controller\PostController::createPost
+
+update_post:
+    path: /post/{id}/edit
+    controller: App\Controller\PostController::updatePost
+    requirements:
+        id: \d+
+
+delete_post:
+    path: /post/{id}/delete
+    controller: App\Controller\PostController::deletePost
+    requirements:
+        id: \d+

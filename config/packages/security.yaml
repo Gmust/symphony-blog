@@ -29,6 +29,11 @@ security:
                 # always_remember_me: true
 
     access_control:
-        - { path: ^/login, roles: PUBLIC_ACCESS  }
-        - { path: ^/register, roles: PUBLIC_ACCESS  }
-        - { path: ^/, roles: ROLE_USER }
+        - { path: ^/login, roles: PUBLIC_ACCESS }
+        - { path: ^/register, roles: PUBLIC_ACCESS }
+        - { path: ^/home, roles: ROLE_USER }
+        - { path: ^/, roles: PUBLIC_ACCESS }
+        - { path: ^/posts, roles: PUBLIC_ACCESS }
+        - { path: ^/post/new, roles: ROLE_USER }
+        - { path: ^/post/\d+/edit, roles: ROLE_USER }
+        - { path: ^/post/\d+/delete, roles: ROLE_USER }

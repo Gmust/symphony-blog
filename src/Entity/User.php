@@ -31,7 +31,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'json')]
     private array $roles = [];
 
-    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Post::class)]
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Post::class, orphanRemoval: true)]
     private Collection $posts;
 
     public function __construct()
@@ -67,20 +67,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    public function getPassword(): string
+    {
+        return $this->password;
+    }
+
     public function setPassword(string $password): self
     {
         $this->password = $password;
-        return $this;
-    }
-
-    public function getPosts(): Collection
-    {
-        return $this->posts;
-    }
-
-    public function setPosts(Collection $posts): self
-    {
-        $this->posts = $posts;
         return $this;
     }
 
@@ -98,15 +92,39 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function getPassword(): string
+    public function eraseCredentials(): void
     {
-        return $this->password;
     }
-
-    public function eraseCredentials(): void {}
 
     public function getUserIdentifier(): string
     {
-        return (string) $this->email;
+        return (string)$this->email;
+    }
+
+    public function getPosts(): Collection
+    {
+        return $this->posts;
+    }
+
+    public function addPost(Post $post): self
+    {
+        if (!$this->posts->contains($post)) {
+            $this->posts[] = $post;
+            $post->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removePost(Post $post): self
+    {
+        if ($this->posts->removeElement($post)) {
+            // Set the owning side to null (unless already changed)
+            if ($post->getUser() === $this) {
+                $post->setUser(null);
+            }
+        }
+
+        return $this;
     }
 }

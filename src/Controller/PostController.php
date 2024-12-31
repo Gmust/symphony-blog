@@ -3,129 +3,105 @@
 namespace App\Controller;
 
 use App\Entity\Post;
-use App\Entity\User;
+use App\Form\PostType;
 use App\Repository\PostRepository;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 class PostController extends AbstractController
 {
     private PostRepository $postRepository;
-    private EntityManagerInterface $entityManager;
 
-    public function __construct(PostRepository $postRepository, EntityManagerInterface $entityManager)
+    public function __construct(PostRepository $postRepository)
     {
         $this->postRepository = $postRepository;
-        $this->entityManager = $entityManager;
     }
 
     #[Route('/posts', name: 'get_all_posts', methods: ['GET'])]
-    public function getAllPosts(): JsonResponse
+    public function getAllPosts(): Response
     {
         $posts = $this->postRepository->findAllPosts();
-
-        $data = [];
-        foreach ($posts as $post) {
-            $data[] = [
-                'id' => $post->getId(),
-                'title' => $post->getTitle(),
-                'content' => $post->getContent(),
-                'user' => $post->getUser()->getUsername()
-            ];
-        }
-
-        return $this->json($data);
+        return $this->render('posts/index.html.twig', ['posts' => $posts]);
     }
 
-    #[Route('/post/{id}', name: 'get_post', methods: ['GET'])]
-    public function getPost(int $id): JsonResponse
+    #[Route('/posts/{id}', name: 'get_post', methods: ['GET'])]
+    public function getPost(int $id): Response
     {
         $post = $this->postRepository->findPostById($id);
 
         if (!$post) {
-            return $this->json(['error' => 'Post not found'], 404);
+            throw $this->createNotFoundException('Post not found');
         }
 
-        return $this->json([
-            'id' => $post->getId(),
-            'title' => $post->getTitle(),
-            'content' => $post->getContent(),
-            'user' => $post->getUser()->getUsername(),
-        ]);
+        return $this->render('posts/show.html.twig', ['post' => $post]);
     }
 
-    #[Route('/post', name: 'create_post', methods: ['POST'])]
-    public function createPost(Request $request): JsonResponse
+    #[Route('/post/new', name: 'create_post', methods: ['GET', 'POST'])]
+    public function createPost(Request $request): Response
     {
-        $data = json_decode($request->getContent(), true);
-
-        $title = $data['title'] ?? null;
-        $content = $data['content'] ?? null;
-        $userId = $data['userId'] ?? null;
-
-        if (empty($title) || empty($content) || empty($userId)) {
-            return $this->json(['error' => 'Missing required fields'], 400);
-        }
-
-        $user = $this->entityManager->getRepository(User::class)->find($userId);
-
-        if (!$user) {
-            return $this->json(['error' => 'User not found'], 404);
-        }
+        $this->denyAccessUnlessGranted('ROLE_USER');
 
         $post = new Post();
-        $post->setTitle($title)
-            ->setContent($content)
-            ->setUser($user);
+        $form = $this->createForm(PostType::class, $post);
 
-        $this->postRepository->save($post);
+        $form->handleRequest($request);
+        if ($form->isSubmitted() && $form->isValid()) {
+            $post->setUser($this->getUser());
+            $this->postRepository->save($post);
+            return $this->redirectToRoute('get_all_posts');
+        }
 
-        return $this->json([
-            'message' => 'Post created successfully',
-            'post' => [
-                'id' => $post->getId(),
-                'title' => $post->getTitle(),
-                'content' => $post->getContent(),
-                'user' => $user->getUsername(),
-            ]
-        ], 201);
+        return $this->render('posts/new.html.twig', [
+            'form' => $form->createView()
+        ]);
     }
 
-    #[Route('/post/{id}', name: 'update_post', methods: ['PUT'])]
-    public function updatePost(int $id, Request $request): JsonResponse
+    #[Route('/post/{id}/edit', name: 'update_post', methods: ['GET', 'POST'])]
+    public function updatePost(int $id, Request $request): Response
     {
-        $data = json_decode($request->getContent(), true);
-
-        $title = $data['title'] ?? null;
-        $content = $data['content'] ?? null;
-
         $post = $this->postRepository->findPostById($id);
 
         if (!$post) {
-            return $this->json(['error' => 'Post not found'], 404);
+            throw $this->createNotFoundException('Post not found');
         }
 
-        if ($title) {
-            $post->setTitle($title);
+        // Authorization check
+        if ($post->getUser() !== $this->getUser()) {
+            throw $this->createAccessDeniedException('You do not have permission to edit this post.');
         }
 
-        if ($content) {
-            $post->setContent($content);
+        $form = $this->createForm(PostType::class, $post);
+        $form->handleRequest($request);
+        if ($form->isSubmitted() && $form->isValid()) {
+            $this->postRepository->save($post);
+            return $this->redirectToRoute('get_all_posts');
         }
 
-        $this->postRepository->save($post);
-
-        return $this->json([
-            'message' => 'Post updated successfully',
-            'post' => [
-                'id' => $post->getId(),
-                'title' => $post->getTitle(),
-                'content' => $post->getContent(),
-                'user' => $post->getUser()->getUsername(),
-            ]
+        return $this->render('posts/edit.html.twig', [
+            'form' => $form->createView()
         ]);
+    }
+
+    #[Route('/post/{id}/delete', name: 'delete_post', methods: ['POST'])]
+    public function deletePost(int $id, Request $request): Response
+    {
+        $post = $this->postRepository->findPostById($id);
+
+        if (!$post) {
+            throw $this->createNotFoundException('Post not found');
+        }
+
+        // Authorization check
+        if ($post->getUser() !== $this->getUser()) {
+            throw $this->createAccessDeniedException('You do not have permission to delete this post.');
+        }
+
+        if ($this->isCsrfTokenValid('delete' . $post->getId(), $request->request->get('_token'))) {
+            $this->postRepository->delete($post);
+        }
+
+        return $this->redirectToRoute('get_all_posts');
     }
 }
