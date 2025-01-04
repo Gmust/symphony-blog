@@ -46,3 +46,13 @@ delete_post:
     controller: App\Controller\PostController::deletePost
     requirements:
         id: \d+
+
+toggle_theme:
+    path: /toggle-theme
+    controller: App\Controller\ThemeController::toggleTheme
+    methods: POST
+
+
+admin_dashboard:
+    path: /admin
+    controller: App\Controller\AdminController::index

@@ -17,10 +17,6 @@ class PostType extends AbstractType
         $builder
             ->add('title')
             ->add('content')
-            ->add('user', EntityType::class, [
-                'class' => User::class,
-                'choice_label' => 'id',
-            ])
             ->add('save', SubmitType::class, ['label' => 'Save Post']);
     }
 

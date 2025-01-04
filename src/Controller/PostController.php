@@ -9,6 +9,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 class PostController extends AbstractController
 {
@@ -85,7 +86,7 @@ class PostController extends AbstractController
     }
 
     #[Route('/post/{id}/delete', name: 'delete_post', methods: ['POST'])]
-    public function deletePost(int $id, Request $request): Response
+    public function deletePost(int $id, Request $request, AuthorizationCheckerInterface $authChecker): Response
     {
         $post = $this->postRepository->findPostById($id);
 
@@ -94,7 +95,7 @@ class PostController extends AbstractController
         }
 
         // Authorization check
-        if ($post->getUser() !== $this->getUser()) {
+        if (!$authChecker->isGranted('ROLE_ADMIN') && $post->getUser() !== $this->getUser()) {
             throw $this->createAccessDeniedException('You do not have permission to delete this post.');
         }
 

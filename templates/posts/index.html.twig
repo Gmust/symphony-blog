@@ -3,25 +3,34 @@
 {% block title %}All Posts{% endblock %}
 
 {% block body %}
-    <div class="flex flex-col justify-start bg-white shadow-md rounded-lg p-6 mt-6 space-y-6">
+    <div class="flex flex-col justify-start bg-white dark:bg-slate-800 shadow-md rounded-lg p-6 mt-6 space-y-6">
         <h1 class="text-2xl font-bold text-emerald-500">All Posts</h1>
         {% if is_granted('IS_AUTHENTICATED_FULLY') %}
-            <a href="{{ path('create_post') }}" class="bg-emerald-500 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+            <a href="{{ path('create_post') }}"
+               class="bg-emerald-500 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
                 Create New Post
             </a>
         {% endif %}
         <ul class="space-y-4">
             {% for post in posts %}
                 <li class="border-b border-gray-200 pb-4 mb-4">
-                    <a href="{{ path('get_post', { id: post.id }) }}" class="text-xl text-emerald-500 hover:underline">{{ post.title }}</a>
-                    <p class="text-gray-600">{{ post.content|slice(0, 100) }}{% if post.content|length > 100 %}...{% endif %}</p>
-                    {% if post.user.id == app.user.id %}
-                        <a href="{{ path('update_post', { id: post.id }) }}" class="text-blue-500 hover:underline">Edit</a>
-                        <form method="post" action="{{ path('delete_post', { id: post.id }) }}" style="display:inline-block;">
-                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ post.id) }}">
-                            <button type="submit" class="text-red-500 hover:underline">Delete</button>
-                        </form>
-                    {% endif %}
+                    <a href="{{ path('get_post', { id: post.id }) }}"
+                       class="text-xl text-emerald-500 hover:underline">{{ post.title }}</a>
+                    <p class="text-gray-600 dark:text-gray-300">{{ post.content|slice(0, 100) }}{% if post.content|length > 100 %}...{% endif %}</p>
+                    <div class="flex flex-row items-center space-x-2 w-full mt-4">
+                        {% if app.user is not null and (post.user.id == app.user.id or is_granted('ROLE_ADMIN')) %}
+                            <a href="{{ path('update_post', { id: post.id }) }}"
+                               class="text-gray-200 bg-blue-500 hover:bg-blue-700 rounded-lg p-2 w-20 text-center">Edit</a>
+                            <form method="post" action="{{ path('delete_post', { id: post.id }) }}"
+                                  style="display:inline-block;">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ post.id) }}">
+                                <button type="submit"
+                                        class="bg-red-500 hover:bg-red-700 text-white p-2 rounded-lg w-20 text-center">
+                                    Delete
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
                 </li>
             {% endfor %}
         </ul>

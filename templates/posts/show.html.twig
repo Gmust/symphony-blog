@@ -3,10 +3,10 @@
 {% block title %}{{ post.title }}{% endblock %}
 
 {% block body %}
-    <div class="flex flex-col justify-start bg-white shadow-md rounded-lg p-6 mt-6 space-y-6">
+    <div class="flex flex-col justify-start bg-white dark:bg-slate-800 shadow-md rounded-lg p-6 mt-6 space-y-6">
         <h1 class="text-2xl font-bold text-emerald-500">{{ post.title }}</h1>
-        <p class="text-gray-700">{{ post.content }}</p>
-        <p class="text-gray-500">Author: {{ post.user.username }}</p>
+        <p class="text-gray-700 dark:text-gray-200">{{ post.content }}</p>
+        <p class="text-gray-500 dark:text-gray-300">Author: {{ post.user.username }}</p>
         <a href="{{ path('get_all_posts') }}" class="text-emerald-500 hover:underline">Back to all posts</a>
     </div>
 {% endblock %}

@@ -29,6 +29,7 @@ security:
                 # always_remember_me: true
 
     access_control:
+        - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/register, roles: PUBLIC_ACCESS }
         - { path: ^/home, roles: ROLE_USER }

@@ -1,6 +1,6 @@
 {# templates/base.html.twig #}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="{{ app.session.get('theme', 'light') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,8 +9,8 @@
         <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
     {% endblock %}
 </head>
-<body class="bg-gray-100 text-gray-800">
-<nav class="bg-emerald-500 p-4">
+<body>
+<nav class="bg-emerald-500 dark:bg-emerald-700 p-4">
     <div class="flex flex-row justify-between items-center">
         <a href="{{ path('app_main') }}" class="text-white font-bold mr-4 flex items-center">
             {{ ux_icon('brandico:blogger', {class: 'w-8 h-8'}) }}
@@ -19,32 +19,54 @@
             <a href="{{ path('get_all_posts') }}" class="text-white font-bold">Posts</a>
         </div>
 
-        {% if  is_granted('IS_AUTHENTICATED_FULLY') %}
-            <div class="flex space-x-2 items-center">
-                <p>Profile</p>
-                {{ ux_icon('lucide:user', {class: 'w-5 h-5'}) }}
-            </div>
-        {% else %}
-            <div class="flex space-x-4">
-                <button
-                    class="space-x-2 flex items-center bg-white hover:bg-gray-400 text-emerald-700 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                    <a href="{{ path('app_login') }}">Login</a>
-                    {{ ux_icon('lucide:log-in', {class: 'w-5 h-5'}) }}
-                </button>
-                <button
-                    class="space-x-2 flex items-center bg-white hover:bg-gray-400  font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                    <a href="{{ path('app_register') }}" class="text-emerald-700">Register</a>
-                    {{ ux_icon('lucide:log-out', {class: 'w-5 h-5'}) }}
-                </button>
-            </div>
+        {% if is_granted('ROLE_ADMIN') %}
+            <a href="{{ path('admin_dashboard') }}" class="text-white font-bold">Admin Panel</a>
         {% endif %}
+
+        <div class="flex items-center space-x-2">
+            {% if is_granted('IS_AUTHENTICATED_FULLY') %}
+                <a href="{{ path('app_home') }}">
+                    <div class="flex space-x-2 items-center">
+                        <p class="text-gray-800 dark:text-gray-200">Profile</p>
+                        {{ ux_icon('lucide:user', {class: 'w-5 h-5 text-gray-800 dark:text-gray-200'}) }}
+                    </div>
+                </a>
+            {% else %}
+                <div class="flex space-x-4">
+                    <button
+                        class="space-x-2 flex items-center bg-white dark:bg-gray-700 dark:hover:bg-gray-900 hover:bg-gray-400 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        <a href="{{ path('app_login') }}" class="text-emerald-700 dark:text-gray-300">Login</a>
+                        {{ ux_icon('lucide:log-in', {class: 'w-5 h-5 text-gray-800 dark:text-gray-200'}) }}
+                    </button>
+                    <button
+                        class="space-x-2 flex items-center bg-white dark:bg-gray-700 dark:hover:bg-gray-900 hover:bg-gray-400 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        <a href="{{ path('app_register') }}" class="text-emerald-700 dark:text-gray-300">Register</a>
+                        {{ ux_icon('lucide:log-out', {class: 'w-5 h-5 text-gray-800 dark:text-gray-200'}) }}
+                    </button>
+                </div>
+            {% endif %}
+            <button id="theme-toggle"
+                    class="flex justify-center items-center bg-white dark:bg-gray-700 dark:hover:bg-gray-900 hover:bg-gray-400 text-emerald-700 dark:text-gray-300 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                {% if app.session.get('theme', 'light') == 'light' %}
+                    {{ ux_icon('lucide:moon', {class: 'w-5 h-5 text-gray-800 dark:text-gray-200'}) }}
+                {% else %}
+                    {{ ux_icon('lucide:sun', {class: 'w-5 h-5 text-gray-800 dark:text-gray-200'}) }}
+                {% endif %}
+            </button>
+        </div>
     </div>
 </nav>
 
-<main class="container mx-auto mt-4">
+<main class="container mx-auto mt-4 text-gray-800 dark:text-gray-200">
     {% block body %}{% endblock %}
 </main>
 
-{% block javascripts %}{% endblock %}
+{% block javascripts %}
+    <script>
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            fetch('{{ path('toggle_theme') }}', {method: 'POST'}).then(() => window.location.reload());
+        });
+    </script>
+{% endblock %}
 </body>
 </html>

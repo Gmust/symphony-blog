@@ -4,6 +4,7 @@ module.exports = {
     "./templates/**/*.{html,js,php,twig}",
     "./src/**/*.{html,js,php,twig}",
   ],
+  darkMode: "selector",
   theme: {
     extend: {},
   },
