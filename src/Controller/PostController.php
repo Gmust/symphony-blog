@@ -4,33 +4,36 @@ namespace App\Controller;
 
 use App\Entity\Post;
 use App\Form\PostType;
-use App\Repository\PostRepository;
+use App\Service\PostService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
 class PostController extends AbstractController
 {
-    private PostRepository $postRepository;
+    private PostService $postService;
+    private CsrfTokenManagerInterface $csrfTokenManager;
 
-    public function __construct(PostRepository $postRepository)
+    public function __construct(PostService $postService, CsrfTokenManagerInterface $csrfTokenManager)
     {
-        $this->postRepository = $postRepository;
+        $this->postService = $postService;
+        $this->csrfTokenManager = $csrfTokenManager;
     }
 
     #[Route('/posts', name: 'get_all_posts', methods: ['GET'])]
     public function getAllPosts(): Response
     {
-        $posts = $this->postRepository->findAllPosts();
+        $posts = $this->postService->getAllPosts();
         return $this->render('posts/index.html.twig', ['posts' => $posts]);
     }
 
     #[Route('/posts/{id}', name: 'get_post', methods: ['GET'])]
     public function getPost(int $id): Response
     {
-        $post = $this->postRepository->findPostById($id);
+        $post = $this->postService->getPost($id);
 
         if (!$post) {
             throw $this->createNotFoundException('Post not found');
@@ -50,7 +53,7 @@ class PostController extends AbstractController
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $post->setUser($this->getUser());
-            $this->postRepository->save($post);
+            $this->postService->savePost($post);
             return $this->redirectToRoute('get_all_posts');
         }
 
@@ -62,7 +65,7 @@ class PostController extends AbstractController
     #[Route('/post/{id}/edit', name: 'update_post', methods: ['GET', 'POST'])]
     public function updatePost(int $id, Request $request): Response
     {
-        $post = $this->postRepository->findPostById($id);
+        $post = $this->postService->getPost($id);
 
         if (!$post) {
             throw $this->createNotFoundException('Post not found');
@@ -76,7 +79,7 @@ class PostController extends AbstractController
         $form = $this->createForm(PostType::class, $post);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->postRepository->save($post);
+            $this->postService->savePost($post);
             return $this->redirectToRoute('get_all_posts');
         }
 
@@ -88,21 +91,16 @@ class PostController extends AbstractController
     #[Route('/post/{id}/delete', name: 'delete_post', methods: ['POST'])]
     public function deletePost(int $id, Request $request, AuthorizationCheckerInterface $authChecker): Response
     {
-        $post = $this->postRepository->findPostById($id);
+        $post = $this->postService->getPost($id);
 
         if (!$post) {
             throw $this->createNotFoundException('Post not found');
         }
 
-        // Authorization check
-        if (!$authChecker->isGranted('ROLE_ADMIN') && $post->getUser() !== $this->getUser()) {
-            throw $this->createAccessDeniedException('You do not have permission to delete this post.');
+        if ($this->postService->deletePost($post, $authChecker, $request)) {
+            return $this->redirectToRoute('get_all_posts');
         }
 
-        if ($this->isCsrfTokenValid('delete' . $post->getId(), $request->request->get('_token'))) {
-            $this->postRepository->delete($post);
-        }
-
-        return $this->redirectToRoute('get_all_posts');
+        return $this->createAccessDeniedException('Could not delete post.');
     }
 }

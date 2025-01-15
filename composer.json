@@ -89,7 +89,7 @@
         }
     },
     "require-dev": {
-        "doctrine/doctrine-fixtures-bundle": "^4.0",
+        "doctrine/doctrine-fixtures-bundle": "*",
         "friendsofphp/php-cs-fixer": "*",
         "symfony/maker-bundle": "^1.61",
         "symfony/security-bundle": "7.2.*",

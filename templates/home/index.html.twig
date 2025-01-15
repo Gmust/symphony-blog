@@ -3,7 +3,7 @@
 {% block title %}My Profile{% endblock %}
 
 {% block body %}
-    <div class="flex flex-row space-x-6 mx-auto bg-white dark:bg-slate-800 shadow-md rounded-lg p-6">
+    <div class="flex flex-row items-start space-x-6 mx-auto bg-white dark:bg-slate-800 shadow-md rounded-lg p-6">
         <div class="flex flex-col">
             <h1 class="text-2xl font-bold text-emerald-500 mb-4">My Profile</h1>
 
@@ -45,14 +45,49 @@
             </form>
         </div>
 
+        <div>
+            <h2 class="text-2xl font-bold text-emerald-500 mb-4">About Me</h2>
+            <ul> {% for data in aboutMeData %}
+                    <li>
+                        <strong>{{ data.key|replace({'_': ' '})|title }}:</strong>
+                        {% if data.value is iterable %}
+                            {{ data.value|join(', ') }}
+                        {% else %}
+                            {{ data.value }}
+                        {% endif %}
+                        <a href="{{ path('app_home_delete', {id: data.id}) }}"
+                           class="text-red-500 hover:text-red-700 underline decoration-inherit">
+                            Delete
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+
+            <h2 class="text-xl font-bold text-emerald-500 mb-4 mt-2">Add Key-Value</h2>
+            <form method="post">
+                {{ form_start(keyValueStoreForm) }}
+                <div class="mb-4">
+                    {{ form_label(keyValueStoreForm.key, 'Key', { 'label_attr': { 'class': 'block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2' } }) }} {{ form_widget(keyValueStoreForm.key, { 'attr': { 'class': 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline' } }) }} {{ form_errors(keyValueStoreForm.key, { 'attr': { 'class': 'text-red-500 text-xs italic' } }) }}
+                </div>
+                <div class="mb-4">
+                    {{ form_label(keyValueStoreForm.value, 'Value', { 'label_attr': { 'class': 'block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2' } }) }} {{ form_widget(keyValueStoreForm.value, { 'attr': { 'class': 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline' } }) }} {{ form_errors(keyValueStoreForm.value, { 'attr': { 'class': 'text-red-500 text-xs italic' } }) }} </div>
+                <div>
+                    <button type="submit"
+                            class="bg-emerald-500 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        Add
+                    </button>
+                </div>
+                {{ form_end(keyValueStoreForm) }}
+            </form>
+        </div>
 
         {% if user.profilePicture %}
-            <div class="mt-4">
+            <div>
                 <img src="data:image/jpeg;base64,{{ user.profilePicture|base64_encode }}" alt="Profile Picture"
                      class="w-32 h-32 rounded-full">
             </div>
         {% else %}
-            <div class="mt-4">
+            <div>
                 <p class="text-lg font-semibold">You have no avatar</p>
             </div>
         {% endif %}

@@ -15,6 +15,10 @@ app_register:
 app_home:
     path: /home
     controller: App\Controller\HomeController::index
+    
+app_home_delete:
+    path: /home/delete/{id}
+    controller: App\Controller\HomeController::delete
 
 app_main:
     path: /

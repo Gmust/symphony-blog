@@ -13,38 +13,51 @@ class KeyValueStore
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column]
-    private ?int $entityId = null;
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'keyValueStores')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?User $user = null;
 
-    #[ORM\Column(nullable: true)]
-    private ?array $data = null;
+    #[ORM\Column]
+    private ?string $key = null;
+
+    #[ORM\Column(type: 'json')]
+    private ?array $value = null;
 
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getEntityId(): ?int
+    public function getUser(): ?User
     {
-        return $this->entityId;
+        return $this->user;
     }
 
-    public function setEntityId(int $entityId): static
+    public function setUser(User $user): self
     {
-        $this->entityId = $entityId;
-
+        $this->user = $user;
         return $this;
     }
 
-    public function getData(): ?array
+    public function getKey(): ?string
     {
-        return $this->data;
+        return $this->key;
     }
 
-    public function setData(?array $data): static
+    public function setKey(string $key): self
     {
-        $this->data = $data;
+        $this->key = $key;
+        return $this;
+    }
 
+    public function getValue(): ?array
+    {
+        return $this->value;
+    }
+
+    public function setValue(array $value): self
+    {
+        $this->value = $value;
         return $this;
     }
 }

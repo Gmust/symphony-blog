@@ -16,56 +16,40 @@ class KeyValueStoreRepository extends ServiceEntityRepository
         parent::__construct($registry, KeyValueStore::class);
     }
 
-    public function findByEntityId(int $entityId): ?KeyValueStore
+    public function findById(int $id): ?KeyValueStore
     {
-        return $this->createQueryBuilder("k")
-            ->andWhere('k.entityId = :entityId')
-            ->setParameter('entityId', $entityId)
-            ->getQuery()
-            ->getOneOrNullResult();
+        return $this->find($id);
     }
 
-    public function saveKeyValue(int $entityId, array $data): void
+    public function findByUser(int $userId): array
     {
-        $keyValueStore = $this->findByEntityId($entityId);
+        return $this->createQueryBuilder('k')
+            ->andWhere('k.user = :userId')
+            ->setParameter('userId', $userId)
+            ->orderBy('k.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 
-        if (!$keyValueStore) {
-            $keyValueStore = new KeyValueStore();
-            $keyValueStore->setEntityId($entityId);
-        }
+    public function save(KeyValueStore $keyValueStore): void
+    {
+        $this->getEntityManager()->persist($keyValueStore);
+        $this->getEntityManager()->flush();
+    }
 
-        $keyValueStore->setData($data);
+    public function update(KeyValueStore $keyValueStore, string $key, $value): void
+    {
+        $data = $keyValueStore->getValue();
+        $data[$key] = $value;
+        $keyValueStore->setValue($data);
 
         $this->getEntityManager()->persist($keyValueStore);
         $this->getEntityManager()->flush();
     }
 
-
-    public function updateKeyValue(int $entityId, string $key, $value): void
+    public function delete(KeyValueStore $keyValueStore): void
     {
-        $keyValueStore = $this->findByEntityId($entityId);
-
-        if ($keyValueStore) {
-            $data = $keyValueStore->getData();
-            $data[$key] = $value;
-            $keyValueStore->setData($data);
-
-            $this->getEntityManager()->persist($keyValueStore);
-            $this->getEntityManager()->flush();
-        }
-    }
-
-    public function deleteKeValue(int $entityId, string $key): void
-    {
-        $keyValueStore = $this->findByEntityId($entityId);
-
-        if ($keyValueStore) {
-            $data = $keyValueStore->getData();
-            unset($data[$key]);
-            $keyValueStore->setData($data);
-
-            $this->getEntityManager()->persist($keyValueStore);
-            $this->getEntityManager()->flush();
-        }
+        $this->getEntityManager()->remove($keyValueStore);
+        $this->getEntityManager()->flush();
     }
 }
