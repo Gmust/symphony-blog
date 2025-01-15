@@ -6,6 +6,15 @@
 parameters:
 
 services:
+    App\Command\CreateGenericServiceCommand:
+        arguments:
+            $filesystem: '@filesystem'
+        tags: [ 'console.command' ]
+    App\Command\CreateUserCommand:
+        arguments:
+            $userRepository: '@App\Repository\UserRepository'
+            $passwordHasher: '@security.password_hasher'
+        tags: [ 'console.command' ]
     # default configuration for services in *this* file
     _defaults:
         autowire: true      # Automatically injects dependencies in your services.

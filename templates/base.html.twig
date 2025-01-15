@@ -27,10 +27,23 @@
             {% if is_granted('IS_AUTHENTICATED_FULLY') %}
                 <a href="{{ path('app_home') }}">
                     <div class="flex space-x-2 items-center">
-                        <p class="text-gray-800 dark:text-gray-200">Profile</p>
-                        {{ ux_icon('lucide:user', {class: 'w-5 h-5 text-gray-800 dark:text-gray-200'}) }}
+                        <p class="text-gray-800 dark:text-gray-200 text-lg font-semibold underline">{{ app.user.username }}</p>
+                        {% if app.user.profilePicture %}
+                            <img src="data:image/jpeg;base64,{{ app.user.profilePicture|base64_encode }}"
+                                 alt="Profile Picture"
+                                 class="w-7 h-7 rounded-full">
+                        {% else %}
+                            {{ ux_icon('lucide:user', {class: 'w-5 h-5 text-gray-800 dark:text-gray-200'}) }}
+                        {% endif %}
                     </div>
                 </a>
+                <form method="post" action="{{ path('app_logout') }}" class="flex space-x-2 items-center">
+                    <button type="submit"
+                            class="space-x-2 flex items-center bg-white dark:bg-gray-700 dark:hover:bg-gray-900 hover:bg-gray-400 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        <p class="text-gray-800 dark:text-gray-200">
+                            Logout</p> {{ ux_icon('lucide:log-out', {class: 'w-5 h-5 text-gray-800 dark:text-gray-200'}) }}
+                    </button>
+                </form>
             {% else %}
                 <div class="flex space-x-4">
                     <button
