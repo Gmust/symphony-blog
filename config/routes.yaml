@@ -60,3 +60,49 @@ toggle_theme:
 admin_dashboard:
     path: /admin
     controller: App\Controller\AdminController::index
+
+api_get_all_posts:
+    path: /api/posts
+    controller: App\Controller\PostController::apiGetAllPosts
+    methods: GET
+
+api_get_post:
+    path: /api/posts/{id}
+    controller: App\Controller\PostController::apiGetPost
+    methods: GET
+
+api_create_post:
+    path: /api/posts
+    controller: App\Controller\PostController::apiCreatePost
+    methods: POST
+
+api_update_post:
+    path: /api/posts/{id}
+    controller: App\Controller\PostController::apiUpdatePost
+    methods: [PUT, PATCH]
+
+api_delete_post:
+    path: /api/posts/{id}
+    controller: App\Controller\PostController::apiDeletePost
+    methods: DELETE
+
+
+api_login:
+    path: /api/login
+    controller: App\Controller\SecurityController::apiLogin
+    methods: POST
+
+api_logout:
+    path: /api/logout
+    controller: App\Controller\SecurityController::apiLogout
+    methods: POST
+
+api_register:
+    path: /api/register
+    controller: App\Controller\RegistrationController::apiRegister
+    methods: POST
+
+api_session_info:
+    path: /api/session-info
+    controller: App\Controller\SecurityController::apiSessionInfo
+    methods: GET

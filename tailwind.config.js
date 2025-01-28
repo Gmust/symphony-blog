@@ -4,7 +4,7 @@ module.exports = {
     "./templates/**/*.{html,js,php,twig}",
     "./src/**/*.{html,js,php,twig}",
   ],
-  darkMode: "selector",
+  darkMode: "class", // or 'media' if you prefer that method
   theme: {
     extend: {},
   },

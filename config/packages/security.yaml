@@ -27,7 +27,15 @@ security:
                 lifetime: 604800
                 path: /
                 # always_remember_me: true
-
+        
+        api:
+            pattern: ^/api
+            stateless: false
+            provider: app_user_provider
+            form_login:
+                login_path: app_login
+                check_path: app_login
+    
     access_control:
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/login, roles: PUBLIC_ACCESS }
@@ -36,5 +44,8 @@ security:
         - { path: ^/, roles: PUBLIC_ACCESS }
         - { path: ^/posts, roles: PUBLIC_ACCESS }
         - { path: ^/post/new, roles: ROLE_USER }
+        - { path: ^/api/post/new, roles: ROLE_USER }
+        - { path: ^/api/post/\d+/edit, roles: ROLE_USER }
+        - { path: ^/api/post/\d+/delete, roles: ROLE_USER }
         - { path: ^/post/\d+/edit, roles: ROLE_USER }
         - { path: ^/post/\d+/delete, roles: ROLE_USER }

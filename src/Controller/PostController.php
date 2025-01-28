@@ -3,104 +3,122 @@
 namespace App\Controller;
 
 use App\Entity\Post;
-use App\Form\PostType;
+use App\Entity\User;
 use App\Service\PostService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
-use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 class PostController extends AbstractController
 {
     private PostService $postService;
-    private CsrfTokenManagerInterface $csrfTokenManager;
+    private EntityManagerInterface $entityManager;
+    private SerializerInterface $serializer;
 
-    public function __construct(PostService $postService, CsrfTokenManagerInterface $csrfTokenManager)
+    public function __construct(
+        PostService $postService,
+        EntityManagerInterface $entityManager,
+        SerializerInterface $serializer
+    )
     {
         $this->postService = $postService;
-        $this->csrfTokenManager = $csrfTokenManager;
+        $this->entityManager = $entityManager;
+        $this->serializer = $serializer;
     }
 
-    #[Route('/posts', name: 'get_all_posts', methods: ['GET'])]
-    public function getAllPosts(): Response
+    #[Route('/api/posts', name: 'api_get_all_posts', methods: ['GET'])]
+    public function apiGetAllPosts(): JsonResponse
     {
         $posts = $this->postService->getAllPosts();
-        return $this->render('posts/index.html.twig', ['posts' => $posts]);
+        $jsonContent = $this->serializer->serialize($posts, 'json', ['groups' => 'post:read']);
+        return new JsonResponse($jsonContent, Response::HTTP_OK, [], true);
     }
 
-    #[Route('/posts/{id}', name: 'get_post', methods: ['GET'])]
-    public function getPost(int $id): Response
+    #[Route('/api/posts/{id}', name: 'api_get_post', methods: ['GET'])]
+    public function apiGetPost(int $id): JsonResponse
     {
         $post = $this->postService->getPost($id);
 
         if (!$post) {
-            throw $this->createNotFoundException('Post not found');
+            return new JsonResponse(['message' => 'Post not found'], Response::HTTP_NOT_FOUND);
         }
 
-        return $this->render('posts/show.html.twig', ['post' => $post]);
+        $jsonContent = $this->serializer->serialize($post, 'json', ['groups' => 'post:read']);
+        return new JsonResponse($jsonContent, Response::HTTP_OK, [], true);
     }
 
-    #[Route('/post/new', name: 'create_post', methods: ['GET', 'POST'])]
-    public function createPost(Request $request): Response
+    #[Route('/api/posts', name: 'api_create_post', methods: ['POST'])]
+    public function apiCreatePost(Request $request, SessionInterface $session): JsonResponse
     {
-        $this->denyAccessUnlessGranted('ROLE_USER');
+        $userId = $session->get('user_id');
+        if (!$userId) {
+            return new JsonResponse(['message' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $user = $this->entityManager->getRepository(User::class)->find($userId);
+        if (!$user) {
+            return new JsonResponse(['message' => 'User not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        if (!isset($data['title']) || !isset($data['content'])) {
+            return new JsonResponse(['message' => 'Invalid data'], Response::HTTP_BAD_REQUEST);
+        }
 
         $post = new Post();
-        $form = $this->createForm(PostType::class, $post);
+        $post->setTitle($data['title']);
+        $post->setContent($data['content']);
+        $post->setUser($user);
 
-        $form->handleRequest($request);
-        if ($form->isSubmitted() && $form->isValid()) {
-            $post->setUser($this->getUser());
-            $this->postService->savePost($post);
-            return $this->redirectToRoute('get_all_posts');
-        }
+        $this->postService->savePost($post);
 
-        return $this->render('posts/new.html.twig', [
-            'form' => $form->createView()
-        ]);
+        $jsonContent = $this->serializer->serialize($post, 'json', ['groups' => 'post:read']);
+        return new JsonResponse($jsonContent, Response::HTTP_CREATED, [], true);
     }
 
-    #[Route('/post/{id}/edit', name: 'update_post', methods: ['GET', 'POST'])]
-    public function updatePost(int $id, Request $request): Response
+    #[Route('/api/posts/{id}', name: 'api_update_post', methods: ['PUT', 'PATCH'])]
+    public function apiUpdatePost(int $id, Request $request): JsonResponse
     {
         $post = $this->postService->getPost($id);
 
         if (!$post) {
-            throw $this->createNotFoundException('Post not found');
+            return new JsonResponse(['message' => 'Post not found'], Response::HTTP_NOT_FOUND);
         }
 
-        // Authorization check
         if ($post->getUser() !== $this->getUser()) {
-            throw $this->createAccessDeniedException('You do not have permission to edit this post.');
+            return new JsonResponse(['message' => 'Access denied'], Response::HTTP_FORBIDDEN);
         }
 
-        $form = $this->createForm(PostType::class, $post);
-        $form->handleRequest($request);
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->postService->savePost($post);
-            return $this->redirectToRoute('get_all_posts');
-        }
+        $data = json_decode($request->getContent(), true);
+        $post->setTitle($data['title'] ?? $post->getTitle());
+        $post->setContent($data['content'] ?? $post->getContent());
 
-        return $this->render('posts/edit.html.twig', [
-            'form' => $form->createView()
-        ]);
+        $this->postService->savePost($post);
+
+        $jsonContent = $this->serializer->serialize($post, 'json', ['groups' => 'post:read']);
+        return new JsonResponse($jsonContent, Response::HTTP_OK, [], true);
     }
 
-    #[Route('/post/{id}/delete', name: 'delete_post', methods: ['POST'])]
-    public function deletePost(int $id, Request $request, AuthorizationCheckerInterface $authChecker): Response
+    #[Route('/api/posts/{id}', name: 'api_delete_post', methods: ['DELETE'])]
+    public function apiDeletePost(int $id): JsonResponse
     {
         $post = $this->postService->getPost($id);
 
         if (!$post) {
-            throw $this->createNotFoundException('Post not found');
+            return new JsonResponse(['message' => 'Post not found'], Response::HTTP_NOT_FOUND);
         }
 
-        if ($this->postService->deletePost($post, $authChecker, $request)) {
-            return $this->redirectToRoute('get_all_posts');
+        if (!$this->isGranted('ROLE_ADMIN') && $post->getUser() !== $this->getUser()) {
+            return new JsonResponse(['message' => 'Access denied'], Response::HTTP_FORBIDDEN);
         }
 
-        return $this->createAccessDeniedException('Could not delete post.');
+        $this->postService->deletePost($post);
+
+        return new JsonResponse(['message' => 'Post deleted successfully'], Response::HTTP_NO_CONTENT);
     }
 }
