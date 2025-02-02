@@ -106,3 +106,24 @@ api_session_info:
     path: /api/session-info
     controller: App\Controller\SecurityController::apiSessionInfo
     methods: GET
+
+
+api_add_about_me:
+    path: /api/home/about-me
+    controller: App\Controller\HomeController::apiAddAboutMe
+    methods: POST
+    
+api_delete_about_me:
+    path: /api/home/about-me/{id}
+    controller: App\Controller\HomeController::apiDeleteAboutMe
+    methods: DELETE
+
+api_get_about_me:
+    path: /api/home/about-me
+    controller: App\Controller\HomeController::apiGetAboutMe
+    methods: GET
+    
+api_update_user:
+    path: /api/user/update
+    controller: App\Controller\HomeController::apiUpdateUser
+    methods: [PUT, PATCH]

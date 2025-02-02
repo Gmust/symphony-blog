@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Repository\KeyValueStoreRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: KeyValueStoreRepository::class)]
 class KeyValueStore
@@ -11,16 +12,20 @@ class KeyValueStore
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['key_value:read'])]
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'keyValueStores')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['key_value:read'])]
     private ?User $user = null;
 
     #[ORM\Column]
+    #[Groups(['key_value:read'])]
     private ?string $key = null;
 
     #[ORM\Column(type: 'json')]
+    #[Groups(['key_value:read'])]
     private ?array $value = null;
 
     public function getId(): ?int

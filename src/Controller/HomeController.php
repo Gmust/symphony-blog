@@ -3,27 +3,33 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Entity\KeyValueStore;
 use App\Form\UserProfileType;
 use App\Form\KeyValueStoreType;
 use App\Service\UserService;
 use App\Service\KeyValueStoreService;
 use App\Repository\KeyValueStoreRepository;
-use App\Entity\KeyValueStore;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class HomeController extends AbstractController
 {
     private $keyValueStoreRepository;
     private $keyValueStoreService;
+    private $entityManager;
 
-    public function __construct(KeyValueStoreRepository $keyValueStoreRepository, KeyValueStoreService $keyValueStoreService)
+    public function __construct(KeyValueStoreRepository $keyValueStoreRepository, KeyValueStoreService $keyValueStoreService, EntityManagerInterface $entityManager)
     {
         $this->keyValueStoreRepository = $keyValueStoreRepository;
         $this->keyValueStoreService = $keyValueStoreService;
+        $this->entityManager = $entityManager;
     }
 
     #[Route('/home', name: 'app_home')]
@@ -77,7 +83,7 @@ class HomeController extends AbstractController
     #[Route('/home/delete/{id}', name: 'app_home_delete')]
     public function delete(int $id): Response
     {
-        $keyValueStore = $this->keyValueStoreRepository->findById($id);
+        $keyValueStore = $this->keyValueStoreRepository->find($id);
 
         if ($keyValueStore) {
             $this->keyValueStoreService->delete($keyValueStore);
@@ -86,28 +92,29 @@ class HomeController extends AbstractController
         return $this->redirectToRoute('app_home');
     }
 
-    #[Route('/api/home', name: 'api_get_home_data', methods: ['GET'])]
-    public function apiGetHomeData(SessionInterface $session): \Symfony\Component\HttpFoundation\JsonResponse
+    #[Route('/api/home/about-me', name: 'api_get_about_me', methods: ['GET'])]
+    public function apiGetAboutMe(SessionInterface $session): JsonResponse
     {
         $userId = $session->get('user_id');
         if (!$userId) {
             return $this->json(['message' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
         }
 
-        $user = $this->getDoctrine()->getRepository(User::class)->find($userId);
+        $user = $this->entityManager->getRepository(User::class)->find($userId);
         $aboutMeData = $this->keyValueStoreRepository->findBy(['user' => $user]);
-        return $this->json($aboutMeData);
+
+        return $this->json($aboutMeData, Response::HTTP_OK, [], ['groups' => 'key_value:read']);
     }
 
-    #[Route('/api/home', name: 'api_add_home_data', methods: ['POST'])]
-    public function apiAddHomeData(Request $request, SessionInterface $session): \Symfony\Component\HttpFoundation\JsonResponse
+    #[Route('/api/home/about-me', name: 'api_add_about_me', methods: ['POST'])]
+    public function apiAddAboutMe(Request $request, SessionInterface $session): JsonResponse
     {
         $userId = $session->get('user_id');
         if (!$userId) {
             return $this->json(['message' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
         }
 
-        $user = $this->getDoctrine()->getRepository(User::class)->find($userId);
+        $user = $this->entityManager->getRepository(User::class)->find($userId);
 
         $data = json_decode($request->getContent(), true);
         $key = $data['key'] ?? null;
@@ -124,18 +131,18 @@ class HomeController extends AbstractController
 
         $this->keyValueStoreService->save($keyValueStore);
 
-        return $this->json($keyValueStore, Response::HTTP_CREATED);
+        return $this->json($keyValueStore, Response::HTTP_CREATED, [], ['groups' => 'key_value:read']);
     }
 
-    #[Route('/api/home/{id}', name: 'api_delete_home_data', methods: ['DELETE'])]
-    public function apiDeleteHomeData(int $id, SessionInterface $session): \Symfony\Component\HttpFoundation\JsonResponse
+    #[Route('/api/home/about-me/{id}', name: 'api_delete_about_me', methods: ['DELETE'])]
+    public function apiDeleteAboutMe(int $id, SessionInterface $session): JsonResponse
     {
         $userId = $session->get('user_id');
         if (!$userId) {
             return $this->json(['message' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
         }
 
-        $keyValueStore = $this->keyValueStoreRepository->findById($id);
+        $keyValueStore = $this->keyValueStoreRepository->find($id);
 
         if ($keyValueStore && $keyValueStore->getUser()->getId() === $userId) {
             $this->keyValueStoreService->delete($keyValueStore);
@@ -143,5 +150,59 @@ class HomeController extends AbstractController
         }
 
         return $this->json(['message' => 'Key-value pair not found'], Response::HTTP_NOT_FOUND);
+    }
+
+    #[Route('/api/user/update', name: 'api_update_user', methods: ['PUT', 'PATCH'])]
+    public function apiUpdateUser(
+        Request                     $request,
+        SessionInterface            $session,
+        UserPasswordHasherInterface $passwordHasher,
+        ValidatorInterface          $validator
+    ): JsonResponse
+    {
+        $userId = $session->get('user_id');
+        if (!$userId) {
+            return $this->json(['message' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $user = $this->entityManager->getRepository(User::class)->find($userId);
+        if (!$user) {
+            return $this->json(['message' => 'User not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        $username = $data['username'] ?? null;
+        $email = $data['email'] ?? null;
+        $currentPassword = $data['currentPassword'] ?? null;
+        $newPassword = $data['newPassword'] ?? null;
+
+        if ($username) {
+            $user->setUsername($username);
+        }
+
+        if ($email) {
+            $existingEmail = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
+            if ($existingEmail && $existingEmail !== $user) {
+                return $this->json(['message' => 'Email already exists'], Response::HTTP_CONFLICT);
+            }
+            $user->setEmail($email);
+        }
+
+        if ($currentPassword && $newPassword) {
+            if (!$passwordHasher->isPasswordValid($user, $currentPassword)) {
+                return $this->json(['message' => 'Current password is incorrect'], Response::HTTP_BAD_REQUEST);
+            }
+            $user->setPassword($passwordHasher->hashPassword($user, $newPassword));
+        }
+
+        $errors = $validator->validate($user);
+        if (count($errors) > 0) {
+            $errorsString = (string)$errors;
+            return $this->json(['message' => 'Validation error', 'errors' => $errorsString], Response::HTTP_BAD_REQUEST);
+        }
+
+        $this->entityManager->flush();
+
+        return $this->json(['message' => 'User updated successfully'], Response::HTTP_OK);
     }
 }

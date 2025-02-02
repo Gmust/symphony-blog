@@ -16,3 +16,7 @@ services:
     # Registering the custom Twig extension
     App\Twig\AppExtension:
         tags: ['twig.extension']
+        
+    App\Serializer\CircularReferenceHandler:
+        arguments: [ '@doctrine.orm.entity_manager' ]
+        tags: [ 'serializer.normalizer' ]    
