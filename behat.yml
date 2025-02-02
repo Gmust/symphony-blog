@@ -1,0 +1,7 @@
+default:
+    extensions:
+        Behat\MinkExtension:
+            base_url: https://localhost:443
+            sessions:
+                default:
+                    symfony2: ~

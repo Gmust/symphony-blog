@@ -10,15 +10,15 @@
         "ext-ctype": "*",
         "ext-http": "*",
         "ext-iconv": "*",
-        "doctrine/dbal": "^4.2",
-        "doctrine/doctrine-bundle": "^2.13",
-        "doctrine/doctrine-migrations-bundle": "^3.3",
-        "doctrine/orm": "^3.3",
-        "gedmo/doctrine-extensions": "^3.17",
+        "doctrine/dbal": "^4.2.2",
+        "doctrine/doctrine-bundle": "^2.13.2",
+        "doctrine/doctrine-migrations-bundle": "^3.4.1",
+        "doctrine/orm": "^3.3.1",
+        "gedmo/doctrine-extensions": "^3.18",
         "runtime/frankenphp-symfony": "^0.2.0",
         "symfony/console": "7.2.*",
         "symfony/dotenv": "7.2.*",
-        "symfony/flex": "^2",
+        "symfony/flex": "^2.4.7",
         "symfony/form": "7.2.*",
         "symfony/framework-bundle": "7.2.*",
         "symfony/http-client": "7.2.*",
@@ -30,12 +30,12 @@
         "symfony/security-core": "7.2.*",
         "symfony/security-csrf": "7.2.*",
         "symfony/serializer": "7.2.*",
-        "symfony/ux-icons": "^2.22",
+        "symfony/ux-icons": "^2.22.1",
         "symfony/validator": "7.2.*",
         "symfony/webpack-encore-bundle": "^2.2",
         "symfony/yaml": "7.2.*",
         "symfonycasts/tailwind-bundle": "^0.7.1",
-        "symfonycasts/verify-email-bundle": "*"
+        "symfonycasts/verify-email-bundle": ">=1.17.3"
     },
     "config": {
         "allow-plugins": {
@@ -90,13 +90,18 @@
         }
     },
     "require-dev": {
-        "doctrine/doctrine-fixtures-bundle": "*",
-        "friendsofphp/php-cs-fixer": "*",
-        "symfony/maker-bundle": "^1.61",
+        "behat/behat": "^3.18.1",
+        "doctrine/doctrine-fixtures-bundle": ">=4",
+        "friendsofphp/php-cs-fixer": ">=3.68.5",
+        "phpunit/phpunit": "^11.5.6",
+        "symfony/browser-kit": "7.2.*",
+        "symfony/css-selector": "7.2.*",
+        "symfony/maker-bundle": "^1.62.1",
+        "symfony/phpunit-bridge": "^7.2",
         "symfony/security-bundle": "7.2.*",
         "symfony/twig-bundle": "7.2.*",
         "symfony/web-profiler-bundle": "7.2.*",
-        "twig/extra-bundle": "^2.12|^3.0",
-        "twig/twig": "^2.12|^3.0"
+        "twig/extra-bundle": "^2.12|^3.19",
+        "twig/twig": "^2.12|^3.19"
     }
 }
