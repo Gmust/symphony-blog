@@ -1,4 +1,5 @@
 framework:
+    error_controller: 'App\Controller\ErrorController::show'
     secret: '%env(APP_SECRET)%'
     test: true
     session:
@@ -6,3 +7,5 @@ framework:
         cookie_secure: auto
         cookie_samesite: lax
         storage_factory_id: session.storage.factory.mock_file
+    serializer:
+        enabled: true

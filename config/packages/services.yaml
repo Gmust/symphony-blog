@@ -15,8 +15,12 @@ services:
 
     # Registering the custom Twig extension
     App\Twig\AppExtension:
-        tags: ['twig.extension']
-        
+        tags: [ 'twig.extension' ]
+    
     App\Serializer\CircularReferenceHandler:
         arguments: [ '@doctrine.orm.entity_manager' ]
-        tags: [ 'serializer.normalizer' ]    
+        tags: [ 'serializer.normalizer' ]
+    
+    App\EventListener\ExceptionListener:
+        tags:
+            - { name: kernel.event_listener, event: kernel.exception }

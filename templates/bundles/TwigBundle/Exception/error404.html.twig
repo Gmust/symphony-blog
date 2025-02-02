@@ -1,0 +1,12 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Page Not Found{% endblock %}
+
+{% block body %}
+    <h1>Oops! The page you are looking for does not exist.</h1>
+    <p>It seems we can't find what you're looking for. Perhaps searching can help.</p>
+    <a href="{{ path('get_all_posts') }}"
+       class="text-emerald-500 hover:text-emerald-700 underline decoration-inherit">
+       Posts page
+    </a>
+{% endblock %}

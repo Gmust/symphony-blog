@@ -1,0 +1,14 @@
+{# templates/errors/error.html.twig #}
+
+{% extends 'base.html.twig' %}
+
+{% block title %}An Error Occurred{% endblock %}
+
+{% block body %}
+    <h1>An error occurred</h1>
+    <p>{{ message }}</p>
+    <a href="{{ path('app_main') }}"
+       class="text-emerald-500 hover:text-emerald-700 underline decoration-inherit">
+        Back to home
+    </a>
+{% endblock %}

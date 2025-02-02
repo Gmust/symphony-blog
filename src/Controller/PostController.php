@@ -28,7 +28,7 @@ class PostController extends AbstractController
         PostRepository         $postRepository,
         PostService            $postService,
         EntityManagerInterface $entityManager,
-        SerializerInterface    $serializer,
+        SerializerInterface    $serializer
     )
     {
         $this->postRepository = $postRepository;
@@ -225,13 +225,9 @@ class PostController extends AbstractController
 
         // Delete post
         $this->postRepository->delete($post);
-
         // Fetch all remaining posts
         $posts = $this->postRepository->findAllPosts();
         $jsonContent = $this->serializer->serialize($posts, 'json', ['groups' => 'post:read']);
-
         return new JsonResponse($jsonContent, Response::HTTP_OK, [], true);
     }
-
 }
-
