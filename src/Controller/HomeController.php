@@ -17,6 +17,7 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class HomeController extends AbstractController
@@ -24,12 +25,19 @@ class HomeController extends AbstractController
     private $keyValueStoreRepository;
     private $keyValueStoreService;
     private $entityManager;
+    private $serializer;
 
-    public function __construct(KeyValueStoreRepository $keyValueStoreRepository, KeyValueStoreService $keyValueStoreService, EntityManagerInterface $entityManager)
+    public function __construct(
+        KeyValueStoreRepository $keyValueStoreRepository,
+        KeyValueStoreService    $keyValueStoreService,
+        EntityManagerInterface  $entityManager,
+        SerializerInterface     $serializer
+    )
     {
         $this->keyValueStoreRepository = $keyValueStoreRepository;
         $this->keyValueStoreService = $keyValueStoreService;
         $this->entityManager = $entityManager;
+        $this->serializer = $serializer;
     }
 
     #[Route('/home', name: 'app_home')]
@@ -103,7 +111,8 @@ class HomeController extends AbstractController
         $user = $this->entityManager->getRepository(User::class)->find($userId);
         $aboutMeData = $this->keyValueStoreRepository->findBy(['user' => $user]);
 
-        return $this->json($aboutMeData, Response::HTTP_OK, [], ['groups' => 'key_value:read']);
+        $jsonContent = $this->serializer->serialize($aboutMeData, 'json', ['groups' => 'key_value:read']);
+        return new JsonResponse($jsonContent, Response::HTTP_OK, [], true);
     }
 
     #[Route('/api/home/about-me', name: 'api_add_about_me', methods: ['POST'])]
@@ -203,6 +212,7 @@ class HomeController extends AbstractController
 
         $this->entityManager->flush();
 
-        return $this->json(['message' => 'User updated successfully'], Response::HTTP_OK);
+        $jsonContent = $this->serializer->serialize($user, 'json', ['groups' => 'user:read']);
+        return new JsonResponse($jsonContent, Response::HTTP_OK, [], true);
     }
 }
