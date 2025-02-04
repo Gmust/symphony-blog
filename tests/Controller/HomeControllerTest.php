@@ -3,120 +3,221 @@
 namespace App\Tests\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use App\Repository\UserRepository;
+use App\Repository\KeyValueStoreRepository;
+use App\Entity\User;
+use App\Entity\KeyValueStore;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Cookie;
 
 class HomeControllerTest extends WebTestCase
 {
-    private $sessionId = '2730f65b4b67fe89b0bf7d8aee203f7e';
+    private $client;
+    private $entityManager;
+    private $userRepository;
+    private $keyValueStoreRepository;
 
-    public function testIndex()
+    protected function setUp(): void
     {
-        $client = static::createClient();
-        $crawler = $client->request('GET', '/home');
+        $this->client = static::createClient();
 
-// Check for the My Profile title
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
-        $this->assertSelectorTextContains('h1', 'My Profile');
+        $this->entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $this->userRepository = $this->entityManager->getRepository(User::class);
+        $this->keyValueStoreRepository = $this->entityManager->getRepository(KeyValueStore::class);
     }
 
-    public function testDelete()
+    public function testIndexAsAuthenticatedUser()
     {
-        $client = static::createClient();
-        $client->request('POST', '/home/delete/1');
+        $user = $this->userRepository->findOneByEmail('test@example.com');
+        $this->client->loginUser($user);
 
-        $this->assertEquals(302, $client->getResponse()->getStatusCode());
-        $this->assertTrue($client->getResponse()->isRedirect('/home'));
+        $crawler = $this->client->request('GET', '/home');
+
+        $this->assertResponseIsSuccessful();
+        $this->assertSelectorTextContains('h1', "My Profile");
     }
 
-    public function testApiGetAboutMeUnauthorized()
+    public function testIndexAsGuest()
     {
-        $client = static::createClient();
-        $client->request('GET', '/api/home/about-me');
+        $this->client->request('GET', '/home');
 
-        $this->assertEquals(401, $client->getResponse()->getStatusCode());
+        $this->assertResponseRedirects('/login');
     }
 
-    public function testApiGetAboutMeAuthorized()
+    public function testDeleteExistingKeyValueStore()
     {
-        $client = static::createClient([], [
-            'PHPSESSID' => $this->sessionId,
-        ]);
-        $crawler = $client->request('GET', '/api/home/about-me');
+        $user = $this->userRepository->findOneByEmail('test@example.com');
+        $this->client->loginUser($user);
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
-        $this->assertJson($client->getResponse()->getContent());
+        $keyValue = $this->keyValueStoreRepository->findOneBy(['user' => $user]);
+        $this->client->request('GET', '/home/delete/' . $keyValue->getId());
+
+        $this->assertResponseRedirects('/home');
+
+        // Verify deletion
+        $deletedEntry = $this->keyValueStoreRepository->find($keyValue->getId());
+        $this->assertNull($deletedEntry);
     }
 
-    public function testApiAddAboutMeUnauthorized()
+    public function testDeleteNonExistingKeyValueStore()
     {
-        $client = static::createClient();
-        $client->request('POST', '/api/home/about-me', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-        ], json_encode(['key' => 'hobby', 'value' => ['Reading', 'Traveling']]));
+        $user = $this->userRepository->findOneByEmail('test@example.com');
+        $this->client->loginUser($user);
 
-        $this->assertEquals(401, $client->getResponse()->getStatusCode());
+        $this->client->request('GET', '/home/delete/9999');
+
+        $this->assertResponseRedirects('/home');
     }
 
-    public function testApiAddAboutMeAuthorized()
+    private function simulateSession(User $user)
     {
-        $client = static::createClient([], [
-            'PHPSESSID' => $this->sessionId,
-        ]);
-        $client->request('POST', '/api/home/about-me', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-        ], json_encode(['key' => 'hobby', 'value' => ['Reading', 'Traveling']]));
+        $session = self::$container->get('session');
+        $session->set('user_id', $user->getId());
+        $session->save();
 
-        $this->assertEquals(201, $client->getResponse()->getStatusCode());
-        $this->assertJson($client->getResponse()->getContent());
+        $cookie = new Cookie($session->getName(), $session->getId());
+        $this->client->getCookieJar()->set($cookie);
+    }
+
+    public function testApiGetAboutMeAuthenticated()
+    {
+        $user = $this->userRepository->findOneByEmail('test@example.com');
+        $this->simulateSession($user);
+
+        $this->client->request('GET', '/api/home/about-me');
+
+        $this->assertResponseIsSuccessful();
+        $this->assertJson($this->client->getResponse()->getContent());
+
+        $data = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertNotEmpty($data);
+        $this->assertEquals('name', $data[0]['key']); // Adjust based on your fixture data
+    }
+
+    public function testApiGetAboutMeUnauthenticated()
+    {
+        $this->client->request('GET', '/api/home/about-me');
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
+    public function testApiAddAboutMeAuthenticated()
+    {
+        $user = $this->userRepository->findOneByEmail('test@example.com');
+        $this->simulateSession($user);
+
+        $data = [
+            'key' => 'hobby',
+            'value' => ['Coding', 'Music']
+        ];
+
+        $this->client->request(
+            'POST',
+            '/api/home/about-me',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode($data)
+        );
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        $this->assertJson($this->client->getResponse()->getContent());
+
+        $responseData = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertEquals('hobby', $responseData['key']);
+    }
+
+    public function testApiAddAboutMeInvalidData()
+    {
+        $user = $this->userRepository->findOneByEmail('test@example.com');
+        $this->simulateSession($user);
+
+        $data = []; // Missing 'key' and 'value'
+
+        $this->client->request(
+            'POST',
+            '/api/home/about-me',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode($data)
+        );
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+    }
+
+    public function testApiDeleteAboutMeAuthenticated()
+    {
+        $user = $this->userRepository->findOneByEmail('test@example.com');
+        $this->simulateSession($user);
+
+        $keyValue = $this->keyValueStoreRepository->findOneBy(['user' => $user]);
+
+        $this->client->request('DELETE', '/api/home/about-me/' . $keyValue->getId());
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
+
+        // Verify deletion
+        $deletedEntry = $this->keyValueStoreRepository->find($keyValue->getId());
+        $this->assertNull($deletedEntry);
     }
 
     public function testApiDeleteAboutMeUnauthorized()
     {
-        $client = static::createClient();
-        $client->request('DELETE', '/api/home/about-me/1');
+        $this->client->request('DELETE', '/api/home/about-me/1');
 
-        $this->assertEquals(401, $client->getResponse()->getStatusCode());
+        $this->assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 
-    public function testApiDeleteAboutMeAuthorized()
+    public function testApiUpdateUserAuthenticated()
     {
-        $client = static::createClient([], [
-            'PHPSESSID' => $this->sessionId,
-        ]);
-        $client->request('DELETE', '/api/home/about-me/1');
+        $user = $this->userRepository->findOneByEmail('user1@example.com');
+        $this->simulateSession($user);
 
-        $this->assertEquals(204, $client->getResponse()->getStatusCode());
+        $data = [
+            'username' => 'UpdatedUser1',
+            'email' => 'updateduser1@example.com',
+            'currentPassword' => 'Password1',
+            'newPassword' => 'NewPassword1'
+        ];
+
+        $this->client->request(
+            'PUT',
+            '/api/user/update',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode($data)
+        );
+
+        $this->assertResponseIsSuccessful();
+        $this->assertJson($this->client->getResponse()->getContent());
+
+        $updatedUser = $this->userRepository->find($user->getId());
+        $this->assertEquals('UpdatedUser1', $updatedUser->getUsername());
+        $this->assertEquals('updateduser1@example.com', $updatedUser->getEmail());
     }
 
-    public function testApiUpdateUserUnauthorized()
+    public function testApiUpdateUserInvalidCurrentPassword()
     {
-        $client = static::createClient();
-        $client->request('PUT', '/api/user/update', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-        ], json_encode([
-            'username' => 'new_username',
-            'email' => 'new_email@example.com',
-            'currentPassword' => 'current_password',
-            'newPassword' => 'new_password'
-        ]));
+        $user = $this->userRepository->findOneByEmail('test@example.com');
+        $this->simulateSession($user);
 
-        $this->assertEquals(401, $client->getResponse()->getStatusCode());
-    }
+        $data = [
+            'currentPassword' => 'WrongPassword',
+            'newPassword' => 'NewPassword1'
+        ];
 
-    public function testApiUpdateUserAuthorized()
-    {
-        $client = static::createClient([], [
-            'PHPSESSID' => $this->sessionId,
-        ]);
-        $client->request('PUT', '/api/user/update', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-        ], json_encode([
-            'username' => 'new_username',
-            'email' => 'new_email@example.com',
-            'currentPassword' => 'current_password',
-            'newPassword' => 'new_password'
-        ]));
+        $this->client->request(
+            'PUT',
+            '/api/user/update',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode($data)
+        );
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
-        $this->assertJson($client->getResponse()->getContent());
+        $this->assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
     }
 }

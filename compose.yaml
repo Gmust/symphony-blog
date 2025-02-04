@@ -38,11 +38,24 @@ services:
             POSTGRES_USER: admin
             POSTGRES_PASSWORD: admin
             POSTGRES_DB: main
-        ports:
-            - "5555:5432"
         volumes:
             - postgres_data:/var/lib/postgresql/data
-
+        ports:
+            - "5555:5432"
+        
+    test_db:
+        image: postgres:latest
+        container_name: postgres_test_container
+        restart: unless-stopped
+        environment:
+            POSTGRES_USER: admin
+            POSTGRES_PASSWORD: admin
+            POSTGRES_DB: main_test
+        volumes:
+            - postgres_data_test:/var/lib/postgresql/data
+        ports:
+            - "4444:5432"
+    
     pgadmin:
         image: dpage/pgadmin4:latest
         container_name: pgadmin
@@ -52,10 +65,9 @@ services:
             PGADMIN_DEFAULT_PASSWORD: admin
         ports:
             - "5050:80"
-        volumes:
-            - pgadmin_data:/var/lib/pgadmin
         depends_on:
-            - db
+          - db
+          - test_db
 
     ###> doctrine/doctrine-bundle ###
     database:
@@ -88,6 +100,7 @@ volumes:
     caddy_data:
     caddy_config:
     postgres_data:
+    postgres_data_test:
     pgadmin_data:
     php_sessions:
     

@@ -8,14 +8,19 @@ use App\Repository\UserRepository;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 use Doctrine\Bundle\FixturesBundle\FixtureGroupInterface;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class KeyValueStoreFixture extends Fixture implements FixtureGroupInterface
 {
     private $userRepository;
 
-    public function __construct(UserRepository $userRepository)
+    private UserPasswordHasherInterface $passwordHasher;
+
+
+    public function __construct(UserRepository $userRepository, UserPasswordHasherInterface $passwordHasher)
     {
         $this->userRepository = $userRepository;
+        $this->passwordHasher = $passwordHasher;
     }
 
     public function load(ObjectManager $manager): void
@@ -25,15 +30,15 @@ class KeyValueStoreFixture extends Fixture implements FixtureGroupInterface
         if (!$user) {
             // Create a new user if not found
             $user = new User();
-            $user->setUsername('admin');
-            $user->setEmail('admin@example.com');
+            $user->setUsername('test');
+            $user->setEmail('test@example.com');
             $user->setPassword($this->passwordHasher->hashPassword($user, 'admin_password'));
             $manager->persist($user);
         }
 
         // Key-value pairs for the "About Me" section
         $data = [
-            ['key' => 'name', 'value' => ['John Doe']],
+            ['key' => 'name', 'value' => ['John Doeclear']],
             ['key' => 'birthdate', 'value' => ['1990-01-01']],
             ['key' => 'location', 'value' => ['New York']],
             ['key' => 'hobbies', 'value' => ['reading', 'hiking', 'coding']],

@@ -22,13 +22,13 @@ class UserFixtures extends Fixture implements FixtureGroupInterface
     {
         $firstUser = new User();
         $firstUser->setUsername("User1");
-        $firstUser->setEmail("user1@example.com");
+        $firstUser->setEmail("user13@example.com");
         $firstUser->setPassword($this->passwordHasher->hashPassword($firstUser, "Password1"));
         $manager->persist($firstUser);
 
         $secondUser = new User();
         $secondUser->setUsername("User2");
-        $secondUser->setEmail("user2@example.com");
+        $secondUser->setEmail("user23@example.com");
         $secondUser->setPassword($this->passwordHasher->hashPassword($secondUser, "Password1"));
         $manager->persist($secondUser);
 

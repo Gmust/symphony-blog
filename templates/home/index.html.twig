@@ -8,9 +8,14 @@
             <h1 class="text-2xl font-bold text-emerald-500 mb-4">My Profile</h1>
 
             {% for message in app.flashes('error') %}
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-                    {{ message }}
-                </div>
+
+                {% if message is defined %}
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+                        {{ message }}
+                    </div>
+                {% else %}
+                    <p>An unexpected error occurred.</p>
+                {% endif %}
             {% endfor %}
 
             <form method="post" enctype="multipart/form-data">
