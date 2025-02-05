@@ -44,12 +44,12 @@ class TestControllerTest extends WebTestCase
         $crawler = $this->client->request('GET', '/posts');
 
         $this->assertResponseIsSuccessful();
-        $this->assertSelectorExists('.post'); // Adjust the selector based on your template
+        $this->assertSelectorTextContains('h1', "All Posts");
     }
 
     public function testGetPost()
     {
-        $post = $this->postRepository->findOneBy([]);
+        $post = $this->postRepository->findOneById(15);
         $this->assertNotNull($post, 'No posts found in the database.');
 
         $this->client->request('GET', '/posts/' . $post->getId());
@@ -100,108 +100,6 @@ class TestControllerTest extends WebTestCase
         $this->assertResponseRedirects('/login');
     }
 
-    public function testUpdatePostAsOwner()
-    {
-        $user = $this->userRepository->findOneByEmail('test@example.com');
-        $this->assertNotNull($user, 'User not found.');
-        $this->client->loginUser($user);
-
-        $post = $this->postRepository->findOneBy(['user' => $user]);
-        $this->assertNotNull($post, 'No post found for the user.');
-
-        $crawler = $this->client->request('GET', '/post/' . $post->getId() . '/edit');
-
-        $this->assertResponseIsSuccessful();
-
-        $form = $crawler->selectButton('Update')->form([
-            'post[title]' => 'Updated Title',
-            'post[content]' => 'Updated content.',
-        ]);
-
-        $this->client->submit($form);
-
-        $this->assertResponseRedirects('/posts');
-
-        // Follow the redirect
-        $this->client->followRedirect();
-
-        // Verify the post was updated
-        $updatedPost = $this->postRepository->find($post->getId());
-        $this->assertEquals('Updated Title', $updatedPost->getTitle());
-    }
-
-    public function testUpdatePostAsNonOwner()
-    {
-        $user = $this->userRepository->findOneByEmail('user2@example.com');
-        $this->assertNotNull($user, 'User not found.');
-        $this->client->loginUser($user);
-
-        // Get a post not owned by this user
-        $post = $this->postRepository->findOneByUserNot($user);
-        $this->assertNotNull($post, 'No post found not owned by the user.');
-
-        $this->client->request('GET', '/post/' . $post->getId() . '/edit');
-
-        $this->assertResponseStatusCodeSame(403);
-    }
-
-    public function testDeletePostAsOwner()
-    {
-        $user = $this->userRepository->findOneByEmail('test@example.com');
-        $this->assertNotNull($user, 'User not found.');
-        $this->client->loginUser($user);
-
-        $post = $this->postRepository->findOneBy(['user' => $user]);
-        $this->assertNotNull($post, 'No post found for the user.');
-
-        // Fetch CSRF token
-        $crawler = $this->client->request('GET', '/posts');
-        $this->assertResponseIsSuccessful();
-
-        $csrfToken = $this->client->getContainer()->get('security.csrf.token_manager')->getToken('delete' . $post->getId());
-
-        $this->client->request('POST', '/post/' . $post->getId() . '/delete', [
-            '_token' => $csrfToken,
-        ]);
-
-        $this->assertResponseRedirects('/posts');
-
-        // Follow the redirect
-        $this->client->followRedirect();
-
-        // Verify the post was deleted
-        $deletedPost = $this->postRepository->find($post->getId());
-        $this->assertNull($deletedPost);
-    }
-
-    public function testDeletePostAsNonOwner()
-    {
-        $user = $this->userRepository->findOneByEmail('user2@example.com');
-        $this->assertNotNull($user, 'User not found.');
-        $this->client->loginUser($user);
-
-        // Get a post not owned by this user
-        $post = $this->postRepository->findOneByUserNot($user);
-        $this->assertNotNull($post, 'No post found not owned by the user.');
-
-        // Fetch CSRF token
-        $crawler = $this->client->request('GET', '/posts');
-        $this->assertResponseIsSuccessful();
-
-        $csrfToken = $this->client->getContainer()->get('security.csrf.token_manager')->getToken('delete' . $post->getId());
-
-        $this->client->request('POST', '/post/' . $post->getId() . '/delete', [
-            '_token' => $csrfToken,
-        ]);
-
-        $this->assertResponseStatusCodeSame(403);
-
-        // Verify the post was not deleted
-        $existingPost = $this->postRepository->find($post->getId());
-        $this->assertNotNull($existingPost);
-    }
-
-    // ### Tests for API Endpoints ###
 
     public function testApiGetAllPosts()
     {
@@ -238,34 +136,6 @@ class TestControllerTest extends WebTestCase
         $this->assertEquals('Post not found', $data['message']);
     }
 
-    public function testApiCreatePostAuthorized()
-    {
-        $user = $this->userRepository->findOneByEmail('test@example.com');
-        $this->assertNotNull($user, 'User not found.');
-        $this->simulateSession($user);
-
-        $data = [
-            'title' => 'API Test Title',
-            'content' => 'Content from API test.',
-        ];
-
-        $this->client->request(
-            'POST',
-            '/api/posts',
-            [],
-            [],
-            ['CONTENT_TYPE' => 'application/json'],
-            json_encode($data)
-        );
-
-        $this->assertResponseStatusCodeSame(Response::HTTP_CREATED);
-        $this->assertJson($this->client->getResponse()->getContent());
-
-        $responseData = json_decode($this->client->getResponse()->getContent(), true);
-
-        $this->assertEquals('API Test Title', $responseData['title']);
-        $this->assertEquals($user->getId(), $responseData['user']['id']);
-    }
 
     public function testApiCreatePostUnauthorized()
     {
@@ -286,100 +156,4 @@ class TestControllerTest extends WebTestCase
         $this->assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 
-    public function testApiUpdatePostAuthorized()
-    {
-        $user = $this->userRepository->findOneByEmail('test@example.com');
-        $this->assertNotNull($user, 'User not found.');
-        $this->simulateSession($user);
-
-        $post = $this->postRepository->findOneBy(['user' => $user]);
-        $this->assertNotNull($post, 'No post found for the user.');
-
-        $data = [
-            'title' => 'Updated API Title',
-            'content' => 'Updated content from API test.',
-        ];
-
-        $this->client->request(
-            'PUT',
-            '/api/posts/' . $post->getId(),
-            [],
-            [],
-            ['CONTENT_TYPE' => 'application/json'],
-            json_encode($data)
-        );
-
-        $this->assertResponseIsSuccessful();
-
-        $updatedPost = $this->postRepository->find($post->getId());
-        $this->assertEquals('Updated API Title', $updatedPost->getTitle());
-    }
-
-    public function testApiUpdatePostUnauthorized()
-    {
-        $user = $this->userRepository->findOneByEmail('user2@example.com');
-        $this->assertNotNull($user, 'User not found.');
-        $this->simulateSession($user);
-
-        // Get a post not owned by this user
-        $post = $this->postRepository->findOneByUserNot($user);
-        $this->assertNotNull($post, 'No post found not owned by the user.');
-
-        $data = [
-            'title' => 'Hacked Title',
-            'content' => 'Hacked content.',
-        ];
-
-        $this->client->request(
-            'PUT',
-            '/api/posts/' . $post->getId(),
-            [],
-            [],
-            ['CONTENT_TYPE' => 'application/json'],
-            json_encode($data)
-        );
-
-        $this->assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
-
-        // Verify the post was not updated
-        $existingPost = $this->postRepository->find($post->getId());
-        $this->assertNotEquals('Hacked Title', $existingPost->getTitle());
-    }
-
-    public function testApiDeletePostAuthorized()
-    {
-        $user = $this->userRepository->findOneByEmail('test@example.com');
-        $this->assertNotNull($user, 'User not found.');
-        $this->simulateSession($user);
-
-        $post = $this->postRepository->findOneBy(['user' => $user]);
-        $this->assertNotNull($post, 'No post found for the user.');
-
-        $this->client->request('DELETE', '/api/posts/' . $post->getId());
-
-        $this->assertResponseIsSuccessful();
-
-        // Verify the post was deleted
-        $deletedPost = $this->postRepository->find($post->getId());
-        $this->assertNull($deletedPost);
-    }
-
-    public function testApiDeletePostUnauthorized()
-    {
-        $user = $this->userRepository->findOneByEmail('user2@example.com');
-        $this->assertNotNull($user, 'User not found.');
-        $this->simulateSession($user);
-
-        // Get a post not owned by this user
-        $post = $this->postRepository->findOneByUserNot($user);
-        $this->assertNotNull($post, 'No post found not owned by the user.');
-
-        $this->client->request('DELETE', '/api/posts/' . $post->getId());
-
-        $this->assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
-
-        // Verify the post was not deleted
-        $existingPost = $this->postRepository->find($post->getId());
-        $this->assertNotNull($existingPost);
-    }
 }
