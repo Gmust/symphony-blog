@@ -2,19 +2,22 @@
 
 namespace App\Service;
 
-use Doctrine\ORM\EntityManagerInterface;
+use App\Repository\UserRepository;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use App\Entity\User;
+use App\Transformer\UserTransformer;
 
 class UserService
 {
-    private $entityManager;
+    private $userRepository;
     private $passwordHasher;
+    private $userTransformer;
 
-    public function __construct(EntityManagerInterface $entityManager, UserPasswordHasherInterface $passwordHasher)
+    public function __construct(UserRepository $userRepository, UserPasswordHasherInterface $passwordHasher, UserTransformer $userTransformer)
     {
-        $this->entityManager = $entityManager;
+        $this->userRepository = $userRepository;
         $this->passwordHasher = $passwordHasher;
+        $this->userTransformer = $userTransformer;
     }
 
     public function updateUserProfile(User $user, ?string $username, ?string $currentPassword, ?string $newPassword): void
@@ -32,7 +35,16 @@ class UserService
             }
         }
 
-        $this->entityManager->persist($user);
-        $this->entityManager->flush();
+        $this->userRepository->save($user);
+    }
+
+    public function transformUser(User $user): array
+    {
+        return $this->userTransformer->transform($user);
+    }
+
+    public function reverseTransformUser(array $data, User $user): User
+    {
+        return $this->userTransformer->reverseTransform($data, $user);
     }
 }

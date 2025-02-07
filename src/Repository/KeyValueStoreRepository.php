@@ -43,8 +43,7 @@ class KeyValueStoreRepository extends ServiceEntityRepository
         $data[$key] = $value;
         $keyValueStore->setValue($data);
 
-        $this->getEntityManager()->persist($keyValueStore);
-        $this->getEntityManager()->flush();
+        $this->save($keyValueStore);
     }
 
     public function delete(KeyValueStore $keyValueStore): void

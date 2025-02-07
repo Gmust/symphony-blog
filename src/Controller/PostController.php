@@ -19,19 +19,16 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 class PostController extends AbstractController
 {
-    private PostRepository $postRepository;
     private PostService $postService;
     private EntityManagerInterface $entityManager;
     private SerializerInterface $serializer;
 
     public function __construct(
-        PostRepository         $postRepository,
         PostService            $postService,
         EntityManagerInterface $entityManager,
         SerializerInterface    $serializer
     )
     {
-        $this->postRepository = $postRepository;
         $this->postService = $postService;
         $this->entityManager = $entityManager;
         $this->serializer = $serializer;
@@ -41,14 +38,14 @@ class PostController extends AbstractController
     #[Route('/posts', name: 'get_all_posts', methods: ['GET'])]
     public function getAllPosts(): Response
     {
-        $posts = $this->postRepository->findAllPosts();
+        $posts = $this->postService->getAllPosts();
         return $this->render('posts/index.html.twig', ['posts' => $posts]);
     }
 
     #[Route('/posts/{id}', name: 'get_post', methods: ['GET'])]
     public function getPost(int $id): Response
     {
-        $post = $this->postRepository->findPostById($id);
+        $post = $this->postService->getPost($id);
 
         if (!$post) {
             throw $this->createNotFoundException('Post not found');
@@ -68,7 +65,7 @@ class PostController extends AbstractController
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $post->setUser($this->getUser());
-            $this->postRepository->save($post);
+            $this->postService->savePost($post);
             return $this->redirectToRoute('get_all_posts');
         }
 
@@ -80,7 +77,7 @@ class PostController extends AbstractController
     #[Route('/post/{id}/edit', name: 'update_post', methods: ['GET', 'POST'])]
     public function updatePost(int $id, Request $request): Response
     {
-        $post = $this->postRepository->findPostById($id);
+        $post = $this->postService->getPost($id);
 
         if (!$post) {
             throw $this->createNotFoundException('Post not found');
@@ -94,7 +91,7 @@ class PostController extends AbstractController
         $form = $this->createForm(PostType::class, $post);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->postRepository->save($post);
+            $this->postService->savePost($post);
             return $this->redirectToRoute('get_all_posts');
         }
 
@@ -106,7 +103,7 @@ class PostController extends AbstractController
     #[Route('/post/{id}/delete', name: 'delete_post', methods: ['POST'])]
     public function deletePost(int $id, Request $request, AuthorizationCheckerInterface $authChecker): Response
     {
-        $post = $this->postRepository->findPostById($id);
+        $post = $this->postService->getPost($id);
 
         if (!$post) {
             throw $this->createNotFoundException('Post not found');
@@ -118,7 +115,7 @@ class PostController extends AbstractController
         }
 
         if ($this->isCsrfTokenValid('delete' . $post->getId(), $request->request->get('_token'))) {
-            $this->postRepository->delete($post);
+            $this->postService->deletePost($post, $authChecker, $request);
         }
 
         return $this->redirectToRoute('get_all_posts');
@@ -190,10 +187,7 @@ class PostController extends AbstractController
         }
 
         $data = json_decode($request->getContent(), true);
-        $post->setTitle($data['title'] ?? $post->getTitle());
-        $post->setContent($data['content'] ?? $post->getContent());
-
-        $this->postService->savePost($post);
+        $post = $this->postService->updatePost($id, $data);
 
         $jsonContent = $this->serializer->serialize($post, 'json', ['groups' => 'post:read']);
         return new JsonResponse($jsonContent, Response::HTTP_OK, [], true);
@@ -224,9 +218,10 @@ class PostController extends AbstractController
         }
 
         // Delete post
-        $this->postRepository->delete($post);
+        $this->postService->deletePost($post, $this->getUser(), $request);
+
         // Fetch all remaining posts
-        $posts = $this->postRepository->findAllPosts();
+        $posts = $this->postService->getAllPosts();
         $jsonContent = $this->serializer->serialize($posts, 'json', ['groups' => 'post:read']);
         return new JsonResponse($jsonContent, Response::HTTP_OK, [], true);
     }
