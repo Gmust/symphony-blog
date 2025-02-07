@@ -42,7 +42,7 @@ services:
             - postgres_data:/var/lib/postgresql/data
         ports:
             - "5555:5432"
-        
+    
     test_db:
         image: postgres:latest
         container_name: postgres_test_container
@@ -66,8 +66,8 @@ services:
         ports:
             - "5050:80"
         depends_on:
-          - db
-          - test_db
+            - db
+            - test_db
 
     ###> doctrine/doctrine-bundle ###
     database:
@@ -90,7 +90,7 @@ services:
 
     phpunit:
         image: ${IMAGES_PREFIX:-}app-php
-        entrypoint: ["php", "/var/www/html/bin/phpunit"]
+        entrypoint: [ "php", "/var/www/html/bin/phpunit" ]
         volumes:
             - .:/var/www/html
         depends_on:

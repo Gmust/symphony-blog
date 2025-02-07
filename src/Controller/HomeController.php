@@ -8,7 +8,6 @@ use App\Form\UserProfileType;
 use App\Form\KeyValueStoreType;
 use App\Service\UserService;
 use App\Service\KeyValueStoreService;
-use App\Repository\KeyValueStoreRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,19 +21,16 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class HomeController extends AbstractController
 {
-    private $keyValueStoreRepository;
-    private $keyValueStoreService;
-    private $entityManager;
-    private $serializer;
+    private KeyValueStoreService $keyValueStoreService;
+    private EntityManagerInterface $entityManager;
+    private SerializerInterface $serializer;
 
     public function __construct(
-        KeyValueStoreRepository $keyValueStoreRepository,
         KeyValueStoreService    $keyValueStoreService,
         EntityManagerInterface  $entityManager,
         SerializerInterface     $serializer
     )
     {
-        $this->keyValueStoreRepository = $keyValueStoreRepository;
         $this->keyValueStoreService = $keyValueStoreService;
         $this->entityManager = $entityManager;
         $this->serializer = $serializer;
@@ -44,7 +40,7 @@ class HomeController extends AbstractController
     public function index(Request $request, UserService $userService): Response
     {
         $user = $this->getUser();
-        $aboutMeData = $this->keyValueStoreRepository->findBy(['user' => $user]);
+        $aboutMeData = $this->keyValueStoreService->getAllByUser($user);
 
         $userProfileForm = $this->createForm(UserProfileType::class, $user);
         $userProfileForm->handleRequest($request);
@@ -91,7 +87,7 @@ class HomeController extends AbstractController
     #[Route('/home/delete/{id}', name: 'app_home_delete')]
     public function delete(int $id): Response
     {
-        $keyValueStore = $this->keyValueStoreRepository->find($id);
+        $keyValueStore = $this->keyValueStoreService->findById($id);
 
         if ($keyValueStore) {
             $this->keyValueStoreService->delete($keyValueStore);
@@ -109,7 +105,7 @@ class HomeController extends AbstractController
         }
 
         $user = $this->entityManager->getRepository(User::class)->find($userId);
-        $aboutMeData = $this->keyValueStoreRepository->findBy(['user' => $user]);
+        $aboutMeData = $this->keyValueStoreService->findByUser($user);
 
         $jsonContent = $this->serializer->serialize($aboutMeData, 'json', ['groups' => 'key_value:read']);
         return new JsonResponse($jsonContent, Response::HTTP_OK, [], true);
@@ -151,7 +147,7 @@ class HomeController extends AbstractController
             return $this->json(['message' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
         }
 
-        $keyValueStore = $this->keyValueStoreRepository->find($id);
+        $keyValueStore = $this->keyValueStoreService->findById($id);
 
         if ($keyValueStore && $keyValueStore->getUser()->getId() === $userId) {
             $this->keyValueStoreService->delete($keyValueStore);
